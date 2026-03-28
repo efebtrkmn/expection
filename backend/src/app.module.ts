@@ -11,6 +11,15 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
+// Sprint 2 Modülleri
+import { AccountsModule } from './accounts/accounts.module';
+import { JournalModule } from './journal/journal.module';
+import { ProductsModule } from './products/products.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { WebSocketModule } from './websocket/websocket.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -48,10 +57,25 @@ import { ConfigService } from '@nestjs/config';
       global: true,
     }),
 
-    // Temel modüller
+    // Event-Driven Mimari (Fatura -> Stok / Yevmiye iletişimi için)
+    EventEmitterModule.forRoot({
+      wildcard: false,
+      delimiter: '.',
+      global: true,
+    }),
+
+    // Temel Sprint 1 modülleri
     PrismaModule,
     AuditLogModule,
     AuthModule,
+
+    // Sprint 2 Modülleri
+    AccountsModule,
+    JournalModule,
+    ProductsModule,
+    InvoicesModule,
+    WebSocketModule,
+    ReportsModule,
   ],
   providers: [
     // Global Guard zinciri: JwtAuth → Tenant → Roles
