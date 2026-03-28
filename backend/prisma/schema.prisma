@@ -198,6 +198,13 @@ model Tenant {
   marketplaceConns    MarketplaceConnection[]
   marketplaceOrders   MarketplaceOrder[]
 
+  // Sprint 4 Eklemeleri
+  settings            TenantSettings?
+  clientUsers         ClientUser[]
+  reconciliationReqs  ReconciliationRequest[]
+  iyzicoSettings      IyzicoSettings?
+  paymentSessions     PaymentSession[]
+
   @@map("tenants")
 }
 
@@ -675,4 +682,134 @@ model MarketplaceOrder {
   @@index([tenantId])
   @@index([connectionId])
   @@map("marketplace_orders")
+}
+
+// ============================================================
+// TENANT_SETTINGS — Tenant Yapılandırması [Sprint 4]
+// ============================================================
+
+model TenantSettings {
+  id                        String    @id @default(uuid()) @db.Uuid
+  tenantId                  String    @unique @map("tenant_id") @db.Uuid
+  reconciliationPeriodDays  Int       @default(7) @map("reconciliation_period_days")
+  portalEnabled             Boolean   @default(true) @map("portal_enabled")
+  invoicePrefix             String    @default("FAT") @map("invoice_prefix") @db.VarChar(10)
+  defaultTaxRate            Int       @default(20) @map("default_tax_rate")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  tenant                    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}
+
+// ============================================================
+// CLIENT_USERS — Müşteri Portal Kullanıcıları [Sprint 4]
+// ============================================================
+
+model ClientUser {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  customerSupplierId   String    @map("customer_supplier_id") @db.Uuid
+  email                String    @db.VarChar(255)
+  passwordHash         String?   @map("password_hash") @db.Text
+  isActive             Boolean   @default(true) @map("is_active")
+  lastLoginAt          DateTime? @map("last_login_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerSupplier     CustomerSupplier @relation(fields: [customerSupplierId], references: [id])
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("client_users")
+}
+
+// ============================================================
+// RECONCILIATION_REQUESTS — E-Mutabakat Talepleri [Sprint 4]
+// ============================================================
+
+enum ReconciliationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TACIT_APPROVED
+  EXPIRED
+}
+
+model ReconciliationRequest {
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @map("tenant_id") @db.Uuid
+  customerSupplierId   String                @map("customer_supplier_id") @db.Uuid
+  tokenHash            String                @unique @map("token_hash") @db.VarChar(64)
+  expiresAt            DateTime              @map("expires_at")
+  status               ReconciliationStatus  @default(PENDING)
+  sentAt               DateTime              @default(now()) @map("sent_at")
+  respondedAt          DateTime?             @map("responded_at")
+  responseIp           String?               @map("response_ip") @db.VarChar(45)
+  responseNote         String?               @map("response_note") @db.Text
+  statementSnapshot    Json                  @map("statement_snapshot") @db.JsonB
+  createdById          String                @map("created_by_id") @db.Uuid
+
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerSupplier     CustomerSupplier      @relation(fields: [customerSupplierId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tokenHash])
+  @@map("reconciliation_requests")
+}
+
+// ============================================================
+// IYZICO_SETTINGS — Iyzico Sub-Merchant Ayarları [Sprint 4]
+// ============================================================
+
+model IyzicoSettings {
+  id                    String    @id @default(uuid()) @db.Uuid
+  tenantId              String    @unique @map("tenant_id") @db.Uuid
+  apiKeyEncrypted       String    @map("api_key_encrypted") @db.Text
+  secretKeyEncrypted    String    @map("secret_key_encrypted") @db.Text
+  subMerchantKey        String?   @map("sub_merchant_key") @db.VarChar(255)
+  subMerchantType       String    @default("PRIVATE_COMPANY") @map("sub_merchant_type") @db.VarChar(50)
+  isLive                Boolean   @default(false) @map("is_live")
+  onboardedAt           DateTime? @map("onboarded_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("iyzico_settings")
+}
+
+// ============================================================
+// PAYMENT_SESSIONS — Ödeme Oturumları [Sprint 4]
+// ============================================================
+
+enum PaymentSessionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+model PaymentSession {
+  id                   String               @id @default(uuid()) @db.Uuid
+  tenantId             String               @map("tenant_id") @db.Uuid
+  invoiceId            String               @map("invoice_id") @db.Uuid
+  customerSupplierId   String               @map("customer_supplier_id") @db.Uuid
+  iyzicoToken          String?              @map("iyzico_token") @db.Text
+  conversationId       String               @unique @map("conversation_id") @db.VarChar(255)
+  amount               Decimal              @db.Decimal(18, 2)
+  currency             String               @default("TRY") @db.VarChar(3)
+  status               PaymentSessionStatus @default(PENDING)
+  callbackPayload      Json?                @map("callback_payload") @db.JsonB
+  paidAt               DateTime?            @map("paid_at")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([conversationId])
+  @@map("payment_sessions")
 }

@@ -27,6 +27,12 @@ import { EInvoiceModule } from './e-invoice/e-invoice.module';
 import { BankingModule } from './banking/banking.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 
+// Sprint 4 Modülleri
+import { MailModule } from './mail/mail.module';
+import { ClientPortalModule } from './client-portal/client-portal.module';
+import { ReconciliationModule } from './reconciliation/reconciliation.module';
+import { PaymentsModule } from './payments/payments.module';
+
 
 @Module({
   imports: [
@@ -89,6 +95,12 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
     EInvoiceModule,
     BankingModule,
     MarketplaceModule,
+
+    // Sprint 4 Modülleri
+    MailModule,
+    ClientPortalModule,
+    ReconciliationModule,
+    PaymentsModule,
   ],
   providers: [
     // Global Guard zinciri: JwtAuth → Tenant → Roles
