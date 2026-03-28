@@ -57,7 +57,10 @@
     "@nestjs-modules/mailer": "^1.11.0",
     "nodemailer": "^6.9.9",
     "handlebars": "^4.7.8",
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^22.0.0",
+    "sanitize-html": "^2.11.0",
+    "helmet": "^7.1.0",
+    "@google/generative-ai": "^0.21.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.2",
@@ -84,7 +87,9 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/sanitize-html": "^2.11.0",
+    "@types/nodemailer": "^6.4.14"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -101,6 +106,19 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
+    "coveragePathIgnorePatterns": [
+      "node_modules",
+      "dist",
+      ".spec.ts"
+    ]
   }
 }

@@ -33,6 +33,9 @@ import { ClientPortalModule } from './client-portal/client-portal.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { PaymentsModule } from './payments/payments.module';
 
+// Sprint 5 Modülleri
+import { AiModule } from './ai/ai.module';
+
 
 @Module({
   imports: [
@@ -101,6 +104,9 @@ import { PaymentsModule } from './payments/payments.module';
     ClientPortalModule,
     ReconciliationModule,
     PaymentsModule,
+
+    // Sprint 5 Modülleri
+    AiModule,
   ],
   providers: [
     // Global Guard zinciri: JwtAuth → Tenant → Roles

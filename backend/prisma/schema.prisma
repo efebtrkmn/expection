@@ -205,6 +205,9 @@ model Tenant {
   iyzicoSettings      IyzicoSettings?
   paymentSessions     PaymentSession[]
 
+  // Sprint 5 Eklemeleri
+  aiQueue             AiClassificationQueue[]
+
   @@map("tenants")
 }
 
@@ -812,4 +815,46 @@ model PaymentSession {
   @@index([tenantId])
   @@index([conversationId])
   @@map("payment_sessions")
+}
+
+// ============================================================
+// AI_CLASSIFICATION_QUEUE — Yapay Zeka Sınıflandırma Kuyruğu [Sprint 5]
+// ============================================================
+
+enum AiClassificationStatus {
+  PENDING_REVIEW
+  AUTO_APPROVED
+  HUMAN_APPROVED
+  REJECTED
+}
+
+enum AiInputType {
+  BANK_TX
+  RECEIPT
+  MANUAL_ENTRY
+}
+
+model AiClassificationQueue {
+  id                   String                  @id @default(uuid()) @db.Uuid
+  tenantId             String                  @map("tenant_id") @db.Uuid
+  inputText            String                  @map("input_text") @db.Text
+  inputType            AiInputType             @default(MANUAL_ENTRY) @map("input_type")
+  suggestedAccountId   String?                 @map("suggested_account_id") @db.Uuid
+  suggestedAccountCode String?                 @map("suggested_account_code") @db.VarChar(20)
+  suggestedAccountName String?                 @map("suggested_account_name") @db.VarChar(255)
+  confidenceScore      Decimal                 @default(0) @map("confidence_score") @db.Decimal(5, 2)
+  aiReasoning          String?                 @map("ai_reasoning") @db.Text
+  aiRawResponse        Json?                   @map("ai_raw_response") @db.JsonB
+  status               AiClassificationStatus  @default(PENDING_REVIEW)
+  referenceId          String?                 @map("reference_id") @db.Uuid
+  journalEntryId       String?                 @map("journal_entry_id") @db.Uuid
+  reviewedByUserId     String?                 @map("reviewed_by_user_id") @db.Uuid
+  reviewNote           String?                 @map("review_note") @db.Text
+  reviewedAt           DateTime?               @map("reviewed_at")
+  createdAt            DateTime                @default(now()) @map("created_at")
+
+  tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("ai_classification_queue")
 }

@@ -3,6 +3,10 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { RequestSanitizerInterceptor } from './common/interceptors/request-sanitizer.interceptor';
+import { SqlInjectionGuard } from './common/guards/sql-injection.guard';
+import helmet from 'helmet';
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -15,17 +19,32 @@ async function bootstrap() {
   // ── Global Prefix ────────────────────────────────────────────
   app.setGlobalPrefix('api/v1');
 
-  // ── Validation Pipe ──────────────────────────────────────────
+  // ── Güvenlik: Helmet HTTP Headers ───────────────────────────
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Swagger UI için
+  }));
+
+  // ── Global Validation Pipe (whitelist + transform) ───────────
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,           // İzin verilmeyen alanları otomatik sil
-      forbidNonWhitelisted: true, // Bilinmeyen alanlarda hata döndür
-      transform: true,            // DTO'ları otomatik dönüştür
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // ── Global XSS Sanitizer + SQL Injection Guard ───────────────
+  app.useGlobalInterceptors(new RequestSanitizerInterceptor());
+  app.useGlobalGuards(new SqlInjectionGuard());
 
   // ── CORS ──────────────────────────────────────────────────────
   const corsOrigins = configService
