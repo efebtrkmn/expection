@@ -265,9 +265,11 @@ model CustomerSupplier {
   updatedAt   DateTime             @updatedAt @map("updated_at")
 
   // İlişkiler
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoices    Invoice[]
-  users       User[]
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices               Invoice[]
+  users                  User[]
+  clientUsers            ClientUser[]
+  reconciliationRequests ReconciliationRequest[]
 
   @@unique([tenantId, taxNumber])
   @@index([tenantId])

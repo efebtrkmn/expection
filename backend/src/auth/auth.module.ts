@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -13,13 +13,13 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: any) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret',
         signOptions: {
           expiresIn: configService.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
         },
       }),
-      inject: ['ConfigService'],
+      inject: [ConfigService],
     }),
     AuditLogModule,
   ],

@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { JournalService } from '../../journal/journal.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InvoiceType, JournalReferenceType, JournalStatus } from '@prisma/client';
-import { CreateJournalDto, LedgerLineDto } from '../../journal/dto/create-journal.dto';
+import { CreateJournalDto, CreateLedgerLineDto } from '../../journal/dto/create-journal.dto';
 
 @Injectable()
 export class InvoiceJournalListener {
@@ -26,7 +26,7 @@ export class InvoiceJournalListener {
     this.logger.log(`[EVENT] Otomatik Yevmiye Kaydı tetiklendi - Fatura No: ${invoice.invoiceNumber}`);
 
     try {
-      const lines: LedgerLineDto[] = [];
+      const lines: CreateLedgerLineDto[] = [];
       const totalAmount = Number(invoice.totalAmount);
       const subtotal = Number(invoice.subtotal);
       const taxAmount = Number(invoice.taxAmount);

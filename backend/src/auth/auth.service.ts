@@ -41,7 +41,7 @@ export interface AuthUser {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  private readonly ARGON2_OPTIONS: argon2.Options = {
+  private readonly ARGON2_OPTIONS = {
     type: argon2.argon2id,
     memoryCost: 65536,    // 64 MB
     timeCost: 3,           // 3 iterasyon
@@ -344,6 +344,6 @@ export class AuthService {
   // ── Şifre Hash ──────────────────────────────────────────────────
 
   async hashPassword(password: string): Promise<string> {
-    return argon2.hash(password, this.ARGON2_OPTIONS);
+    return argon2.hash(password, this.ARGON2_OPTIONS) as Promise<string>;
   }
 }

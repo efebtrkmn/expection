@@ -45,21 +45,21 @@ export class InvoiceCalculatorService {
       // 1. Baz metrikler (Raw values)
       const qty = new Decimal(item.quantity);
       const price = new Decimal(item.unitPrice);
-      
+
       // 2. Brüt Tutar
       const rawSubtotal = qty.times(price);
-      
+
       // 3. İskonto Hesaplama
       const discountRate = new Decimal(item.discountRate || 0).dividedBy(100);
       const discountAmt = rawSubtotal.times(discountRate);
-      
+
       // 4. Net (İskonto düşülmüş KDV Hariç) Tutar
       const netSubtotal = rawSubtotal.minus(discountAmt);
-      
+
       // 5. KDV Hesaplama
       const taxRate = new Decimal(item.taxRate || 20).dividedBy(100);
       const taxAmt = netSubtotal.times(taxRate);
-      
+
       // 6. KDV Tevkifatı (Tevkifat Matrahı KDV'DİR)
       const withRate = new Decimal(item.withholdingRate || 0).dividedBy(100);
       const withholdingAmt = taxAmt.times(withRate);

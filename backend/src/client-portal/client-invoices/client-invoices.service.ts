@@ -27,7 +27,6 @@ export class ClientInvoicesService {
         currency: true,
         status: true,
         eInvoiceStatus: true,
-        paidAt: true,
       },
       orderBy: { issueDate: 'desc' },
     });

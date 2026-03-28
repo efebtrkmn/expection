@@ -125,7 +125,7 @@ export class AuditLogService {
   async logEntityChange(params: {
     tenantId: string;
     userId: string;
-    action: AuditAction.CREATE | AuditAction.UPDATE | AuditAction.DELETE;
+    action: AuditAction;
     entityType: string;
     entityId: string;
     oldValues?: Record<string, any>;

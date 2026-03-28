@@ -51,16 +51,16 @@ export class AiApprovalService {
     if (!cashAccount) throw new BadRequestException('Kasa hesabı (100) bulunamadı');
 
     const journalEntry = await this.journalService.postJournalEntry({
-      tenantId,
+      entryNumber: `AI-M-${Date.now()}`,
+      entryDate: new Date().toISOString(),
       description: `AI İnsan Onayı: ${entry.inputText.substring(0, 100)}`,
       referenceType: JournalReferenceType.MANUAL,
       referenceId: entry.referenceId || undefined,
-      userId,
       lines: [
         { accountId: targetAccount.id, debit: 0, credit: 100, description: entry.inputText.substring(0, 200) },
         { accountId: cashAccount.id, debit: 100, credit: 0, description: 'İnsan onaylı AI sınıflandırma' },
       ],
-    });
+    }, tenantId, userId);
 
     await this.prisma.aiClassificationQueue.update({
       where: { id: queueId },

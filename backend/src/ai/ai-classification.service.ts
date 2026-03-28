@@ -260,16 +260,16 @@ Analiz sonucunu YALNIZCA şu JSON formatında ver:
       if (!cashAccount) return;
 
       const entry = await this.journalService.postJournalEntry({
-        tenantId,
+        entryNumber: `AI-A-${Date.now()}`,
+        entryDate: new Date().toISOString(),
         description: `AI Otomatik Sınıflandırma: ${dto.inputText.substring(0, 100)}`,
         referenceType: JournalReferenceType.MANUAL,
         referenceId: dto.referenceId,
-        userId,
         lines: [
           { accountId: account.id, debit: 0, credit: 100, description: dto.inputText.substring(0, 200) },
           { accountId: cashAccount.id, debit: 100, credit: 0, description: 'Otomatik AI tahsisi' },
         ],
-      });
+      }, tenantId, userId);
 
       await this.prisma.aiClassificationQueue.update({
         where: { id: queueId },

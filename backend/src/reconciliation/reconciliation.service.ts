@@ -113,18 +113,22 @@ export class ReconciliationService {
       },
     });
 
-    // Admin'e bildirim e-postası
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: req.tenantId } });
-    if (tenant?.email) {
+    // Admin'e bildirim e-postasi
+    const adminUser = await this.prisma.user.findFirst({
+      where: { tenantId: req.tenantId, role: 'SuperAdmin', isActive: true },
+      select: { email: true },
+    });
+    if (adminUser?.email) {
       const cs = await this.prisma.customerSupplier.findUnique({
         where: { id: req.customerSupplierId },
         select: { name: true },
       });
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: req.tenantId } });
       await this.mailService.send(
-        tenant.email,
-        `Mutabakat ${dto.decision === 'APPROVED' ? 'Onaylandı ✅' : 'Reddedildi ❌'}`,
+        adminUser.email,
+        `Mutabakat ${dto.decision === 'APPROVED' ? 'Onaylandi' : 'Reddedildi'}`,
         'admin-reconciliation-response',
-        { customerName: cs?.name, decision: dto.decision, note: dto.note, ip: ipAddress, tenantName: tenant.name },
+        { customerName: cs?.name, decision: dto.decision, note: dto.note, ip: ipAddress, tenantName: tenant?.name },
       );
     }
 
@@ -150,10 +154,6 @@ export class ReconciliationService {
         status: ReconciliationStatus.PENDING,
         expiresAt: { lt: new Date() },
       },
-      include: {
-        tenant: { select: { name: true, email: true } },
-        customerSupplier: { select: { name: true } },
-      },
     });
 
     this.logger.log(`${expired.length} zımni kabul tespit edildi`);
@@ -164,16 +164,22 @@ export class ReconciliationService {
         data: {
           status: ReconciliationStatus.TACIT_APPROVED,
           respondedAt: new Date(),
-          responseNote: 'Süre dolması nedeniyle zımni kabul',
+          responseNote: 'Sure dolmasi nedeniyle zimni kabul',
         },
       });
 
       // Admin'e bildirim
-      if (req.tenant.email) {
-        await this.mailService.sendTacitApprovalNotice(req.tenant.email, {
-          customerName: req.customerSupplier.name,
-          tenantName: req.tenant.name,
-          period: `${(req.expiresAt.getTime() - req.sentAt.getTime()) / 86400000} gün`,
+      const adminUser = await this.prisma.user.findFirst({
+        where: { tenantId: req.tenantId, role: 'SuperAdmin', isActive: true },
+        select: { email: true },
+      });
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: req.tenantId }, select: { name: true } });
+      const cs = await this.prisma.customerSupplier.findUnique({ where: { id: req.customerSupplierId }, select: { name: true } });
+      if (adminUser?.email) {
+        await this.mailService.sendTacitApprovalNotice(adminUser.email, {
+          customerName: cs?.name || 'Bilinmeyen',
+          tenantName: tenant?.name || 'Isletme',
+          period: `${(req.expiresAt.getTime() - req.sentAt.getTime()) / 86400000} gun`,
         });
       }
     }

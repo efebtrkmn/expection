@@ -49,7 +49,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Geçersiz kimlik bilgileri' })
   @ApiResponse({ status: 429, description: 'Çok fazla başarısız giriş denemesi' })
   async login(
-    @Request() req,
+    @Request() req: any,
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string,
   ) {

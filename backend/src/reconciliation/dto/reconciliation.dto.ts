@@ -2,7 +2,7 @@ import { IsString, IsNotEmpty, IsEnum, IsOptional, MaxLength } from 'class-valid
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SendReconciliationDto {
-  @ApiProperty({ description: 'Mutabakat gönderilecek cari hesap ID'si' })
+  @ApiProperty({ description: 'Mutabakat gonderilecek cari hesap IDsi' })
   @IsString()
   @IsNotEmpty()
   customerSupplierId: string;
@@ -13,7 +13,7 @@ export class RespondReconciliationDto {
   @IsEnum(['APPROVED', 'REJECTED'])
   decision: 'APPROVED' | 'REJECTED';
 
-  @ApiProperty({ description: 'Müşteri notu (isteğe bağlı)', required: false })
+  @ApiProperty({ description: 'Musteri notu (istege bagli)', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(500)

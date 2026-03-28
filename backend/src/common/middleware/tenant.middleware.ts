@@ -95,13 +95,6 @@ declare global {
   namespace Express {
     interface Request {
       tenantId?: string;
-      user?: {
-        id: string;
-        tenantId: string;
-        email: string;
-        role: string;
-        fullName: string;
-      };
     }
   }
 }

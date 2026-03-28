@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ClientAuthService } from './client-auth.service';
 import { ClientRegisterDto, ClientLoginDto } from './dto/client-login.dto';
-import { Public } from '../../common/decorators/public.decorator';
+import { Public } from '../../common/decorators/roles.decorator';
 
 @ApiTags('Müşteri Portalı — Kimlik Doğrulama')
 @Public()

@@ -88,13 +88,11 @@ export class IyzicoCallbackService {
       },
     });
 
-    // 2. Faturayı PAID yap
+    // 2. Faturayi PAID yap
     const invoice = await this.prisma.invoice.update({
       where: { id: invoiceId },
       data: {
         status: InvoiceStatus.PAID,
-        paidAt: new Date(),
-        paymentMethod: 'IYZICO',
       },
       include: { customerSupplier: true },
     });
@@ -172,16 +170,16 @@ export class IyzicoCallbackService {
       const amountDecimal = new Decimal(amount.toString());
 
       await this.journalService.postJournalEntry({
-        tenantId,
+        entryNumber: `IYZ-${Date.now()}`,
+        entryDate: new Date().toISOString(),
         description: `Iyzico Tahsilat — ${invoice.invoiceNumber}`,
         referenceType: 'PAYMENT' as any,
         referenceId: invoice.id,
-        userId: invoice.createdById,
         lines: [
-          { accountId: debitAccount.id, debit: amountDecimal.toNumber(), credit: 0, description: 'Kredi kartı tahsilatı' },
+          { accountId: debitAccount.id, debit: amountDecimal.toNumber(), credit: 0, description: 'Kredi karti tahsilati' },
           { accountId: creditAccount.id, debit: 0, credit: amountDecimal.toNumber(), description: `Fatura ${invoice.invoiceNumber} tahsilat kapatma` },
         ],
-      });
+      } as any, tenantId, invoice.createdById);
 
       this.logger.log(`Tahsilat yevmiyesi oluşturuldu: DR ${debitAccount.code} / CR ${creditAccount.code}`);
     } catch (err) {

@@ -1,0 +1,82 @@
+import { ProductsService } from './products.service';
+import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+export declare class ProductsController {
+    private readonly productsService;
+    constructor(productsService: ProductsService);
+    create(tenantId: string, userId: string, dto: CreateProductDto): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        isActive: boolean;
+        description: string | null;
+        code: string;
+        unit: import(".prisma/client").$Enums.ProductUnit;
+        unitPrice: import("@prisma/client/runtime/library").Decimal;
+        taxRate: number;
+        stockQuantity: import("@prisma/client/runtime/library").Decimal;
+        criticalStockLevel: import("@prisma/client/runtime/library").Decimal | null;
+        trackStock: boolean;
+        salesAccountCode: string;
+        cogsAccountCode: string;
+    }>;
+    findAll(tenantId: string, search?: string): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        isActive: boolean;
+        description: string | null;
+        code: string;
+        unit: import(".prisma/client").$Enums.ProductUnit;
+        unitPrice: import("@prisma/client/runtime/library").Decimal;
+        taxRate: number;
+        stockQuantity: import("@prisma/client/runtime/library").Decimal;
+        criticalStockLevel: import("@prisma/client/runtime/library").Decimal | null;
+        trackStock: boolean;
+        salesAccountCode: string;
+        cogsAccountCode: string;
+    }[]>;
+    getLowStock(tenantId: string): Promise<unknown>;
+    findOne(id: string, tenantId: string): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        isActive: boolean;
+        description: string | null;
+        code: string;
+        unit: import(".prisma/client").$Enums.ProductUnit;
+        unitPrice: import("@prisma/client/runtime/library").Decimal;
+        taxRate: number;
+        stockQuantity: import("@prisma/client/runtime/library").Decimal;
+        criticalStockLevel: import("@prisma/client/runtime/library").Decimal | null;
+        trackStock: boolean;
+        salesAccountCode: string;
+        cogsAccountCode: string;
+    }>;
+    update(id: string, tenantId: string, userId: string, dto: UpdateProductDto): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        isActive: boolean;
+        description: string | null;
+        code: string;
+        unit: import(".prisma/client").$Enums.ProductUnit;
+        unitPrice: import("@prisma/client/runtime/library").Decimal;
+        taxRate: number;
+        stockQuantity: import("@prisma/client/runtime/library").Decimal;
+        criticalStockLevel: import("@prisma/client/runtime/library").Decimal | null;
+        trackStock: boolean;
+        salesAccountCode: string;
+        cogsAccountCode: string;
+    }>;
+    remove(id: string, tenantId: string, userId: string): Promise<{
+        success: boolean;
+    }>;
+}
