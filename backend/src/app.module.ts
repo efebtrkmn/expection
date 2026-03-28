@@ -12,6 +12,7 @@ import { TenantGuard } from './common/guards/tenant.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Sprint 2 Modülleri
 import { AccountsModule } from './accounts/accounts.module';
@@ -20,6 +21,12 @@ import { ProductsModule } from './products/products.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { ReportsModule } from './reports/reports.module';
+
+// Sprint 3 Modülleri
+import { EInvoiceModule } from './e-invoice/e-invoice.module';
+import { BankingModule } from './banking/banking.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
+
 
 @Module({
   imports: [
@@ -76,6 +83,12 @@ import { ReportsModule } from './reports/reports.module';
     InvoicesModule,
     WebSocketModule,
     ReportsModule,
+
+    // Sprint 3 Modülleri
+    ScheduleModule.forRoot(),
+    EInvoiceModule,
+    BankingModule,
+    MarketplaceModule,
   ],
   providers: [
     // Global Guard zinciri: JwtAuth → Tenant → Roles

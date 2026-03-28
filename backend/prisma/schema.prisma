@@ -128,6 +128,37 @@ enum ProductUnit {
   GUMRUK
 }
 
+// ---- SPRINT 3 YENİ ENUMLAR ----
+
+enum EInvoiceStatus {
+  NOT_SENT
+  PENDING
+  IN_PROGRESS
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum BankTransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum Marketplace {
+  TRENDYOL
+  HEPSIBURADA
+  AMAZON
+}
+
+enum MarketplaceOrderStatus {
+  NEW
+  APPROVED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
 // ============================================================
 // TENANTS — Kiracı Ana Kaydı
 // ============================================================
@@ -161,6 +192,11 @@ model Tenant {
   ledgerLines         LedgerLine[]
   products            Product[]
   invoiceItems        InvoiceItem[]
+
+  // Sprint 3 Eklemeleri
+  bankAccounts        BankAccount[]
+  marketplaceConns    MarketplaceConnection[]
+  marketplaceOrders   MarketplaceOrder[]
 
   @@map("tenants")
 }
@@ -252,10 +288,13 @@ model Invoice {
   originalCurrency    String        @default("TRY") @map("original_currency") @db.VarChar(3)
   journalEntryId      String?       @map("journal_entry_id") @db.Uuid
 
-  // e-Belge entegrasyonu
-  eInvoiceUuid        String?       @map("e_invoice_uuid") @db.Uuid
-  eArchiveUrl         String?       @map("e_archive_url") @db.Text
-  eInvoiceStatus      String?       @map("e_invoice_status") @db.VarChar(50)
+  // e-Belge entegrasyonu (Sprint 3 ile genişletildi)
+  eInvoiceUuid        String?          @map("e_invoice_uuid") @db.Uuid
+  eArchiveUrl         String?          @map("e_archive_url") @db.Text
+  eInvoiceStatus      EInvoiceStatus   @default(NOT_SENT) @map("e_invoice_status")
+  eInvoiceXml         String?          @map("e_invoice_xml") @db.Text
+  eInvoiceSentAt      DateTime?        @map("e_invoice_sent_at")
+  eInvoiceError       String?          @map("e_invoice_error") @db.Text
   
   // İçerik
   notes               String?       @db.Text
@@ -529,4 +568,111 @@ model InvoiceItem {
   @@index([invoiceId])
   @@index([productId])
   @@map("invoice_items")
+}
+
+// ============================================================
+// BANK_ACCOUNTS — Banka Hesapları [Sprint 3]
+// ============================================================
+
+model BankAccount {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  bankName          String    @map("bank_name") @db.VarChar(100)
+  accountNumber     String    @map("account_number") @db.VarChar(34)
+  iban              String    @db.VarChar(34)
+  currency          String    @default("TRY") @db.VarChar(3)
+  provider          String    @default("MANUAL") @db.VarChar(50)
+  providerAccountId String?   @map("provider_account_id") @db.VarChar(255)
+  isActive          Boolean   @default(true) @map("is_active")
+  lastSyncedAt      DateTime? @map("last_synced_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions      BankTransaction[]
+
+  @@index([tenantId])
+  @@map("bank_accounts")
+}
+
+// ============================================================
+// BANK_TRANSACTIONS — Banka Hareketleri (MT940) [Sprint 3]
+// ============================================================
+
+model BankTransaction {
+  id              String              @id @default(uuid()) @db.Uuid
+  tenantId        String              @map("tenant_id") @db.Uuid
+  bankAccountId   String              @map("bank_account_id") @db.Uuid
+  transactionDate DateTime            @map("transaction_date") @db.Date
+  valueDate       DateTime?           @map("value_date") @db.Date
+  amount          Decimal             @db.Decimal(18, 2)
+  currency        String              @default("TRY") @db.VarChar(3)
+  description     String?             @db.Text
+  referenceNumber String?             @map("reference_number") @db.VarChar(255)
+  type            BankTransactionType
+  mt940Raw        String?             @map("mt940_raw") @db.Text
+  matchedInvoiceId String?            @map("matched_invoice_id") @db.Uuid
+  isReconciled    Boolean             @default(false) @map("is_reconciled")
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  bankAccount     BankAccount         @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([bankAccountId])
+  @@index([isReconciled])
+  @@map("bank_transactions")
+}
+
+// ============================================================
+// MARKETPLACE_CONNECTIONS — Pazaryeri Bağlantıları [Sprint 3]
+// ============================================================
+
+model MarketplaceConnection {
+  id              String      @id @default(uuid()) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  marketplace     Marketplace
+  sellerId        String      @map("seller_id") @db.VarChar(255)
+  apiKeyEncrypted String      @map("api_key_encrypted") @db.Text
+  apiSecretEncrypted String?  @map("api_secret_encrypted") @db.Text
+  extraConfig     Json?       @map("extra_config") @db.JsonB
+  isActive        Boolean     @default(true) @map("is_active")
+  lastSyncedAt    DateTime?   @map("last_synced_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders          MarketplaceOrder[]
+
+  @@unique([tenantId, marketplace, sellerId])
+  @@index([tenantId])
+  @@map("marketplace_connections")
+}
+
+// ============================================================
+// MARKETPLACE_ORDERS — Pazaryeri Siparişleri [Sprint 3]
+// ============================================================
+
+model MarketplaceOrder {
+  id             String               @id @default(uuid()) @db.Uuid
+  tenantId       String               @map("tenant_id") @db.Uuid
+  connectionId   String               @map("connection_id") @db.Uuid
+  orderId        String               @map("order_id") @db.VarChar(255)
+  marketplace    Marketplace
+  status         MarketplaceOrderStatus @default(NEW)
+  customerName   String?              @map("customer_name") @db.VarChar(255)
+  customerEmail  String?              @map("customer_email") @db.VarChar(255)
+  totalAmount    Decimal              @map("total_amount") @db.Decimal(18, 2)
+  currency       String               @default("TRY") @db.VarChar(3)
+  invoiceId      String?              @map("invoice_id") @db.Uuid
+  rawPayload     Json                 @map("raw_payload") @db.JsonB
+  orderedAt      DateTime             @map("ordered_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection     MarketplaceConnection @relation(fields: [connectionId], references: [id])
+
+  @@unique([tenantId, marketplace, orderId])
+  @@index([tenantId])
+  @@index([connectionId])
+  @@map("marketplace_orders")
 }
