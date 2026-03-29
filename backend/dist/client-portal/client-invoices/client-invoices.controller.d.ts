@@ -1,10 +1,12 @@
 import { Response } from 'express';
 import { ClientInvoicesService } from './client-invoices.service';
 import { ClientStatementService } from '../client-statement/client-statement.service';
+import { PrismaService } from '../../prisma/prisma.service';
 export declare class ClientInvoicesController {
     private readonly invoicesService;
     private readonly statementService;
-    constructor(invoicesService: ClientInvoicesService, statementService: ClientStatementService);
+    private readonly prisma;
+    constructor(invoicesService: ClientInvoicesService, statementService: ClientStatementService, prisma: PrismaService);
     getSummary(req: any): Promise<{
         totalDebt: number;
         overdueAmount: number;
@@ -73,5 +75,141 @@ export declare class ClientInvoicesController {
         lineItems: import("@prisma/client/runtime/library").JsonValue | null;
         createdById: string;
     }>;
+    createInvoice(dto: any, req: any, res: Response): Promise<Response<any, Record<string, any>>>;
+    deleteInvoice(id: string, req: any): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     downloadPdf(req: any, res: Response): Promise<void>;
+    getProducts(req: any, search?: string): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        isActive: boolean;
+        description: string | null;
+        code: string;
+        unit: import(".prisma/client").$Enums.ProductUnit;
+        unitPrice: import("@prisma/client/runtime/library").Decimal;
+        taxRate: number;
+        stockQuantity: import("@prisma/client/runtime/library").Decimal;
+        criticalStockLevel: import("@prisma/client/runtime/library").Decimal | null;
+        trackStock: boolean;
+        salesAccountCode: string;
+        cogsAccountCode: string;
+    }[]>;
+    createProduct(dto: any, req: any, res: Response): Promise<Response<any, Record<string, any>>>;
+    deleteProduct(id: string, req: any): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    getTransactions(req: any): Promise<({
+        customerSupplier: {
+            id: string;
+            name: string;
+            type: import(".prisma/client").$Enums.CustomerSupplierType;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        tenantId: string;
+        type: import(".prisma/client").$Enums.TransactionType;
+        customerSupplierId: string | null;
+        currency: string;
+        createdById: string;
+        invoiceId: string | null;
+        amount: import("@prisma/client/runtime/library").Decimal;
+        description: string | null;
+        transactionDate: Date;
+        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+        referenceNumber: string | null;
+        gatewayRef: string | null;
+        gatewayStatus: string | null;
+    })[]>;
+    createTransaction(dto: any, req: any, res: Response): Promise<Response<any, Record<string, any>>>;
+    getContactsPivot(req: any): Promise<{
+        id: string;
+        name: string;
+        type: import(".prisma/client").$Enums.CustomerSupplierType;
+        phone: string;
+        email: string;
+        city: string;
+        address: string;
+        taxNumber: string;
+        balance: number;
+        invoiceCount: number;
+        totalDebt: number;
+        totalPaid: number;
+        remaining: number;
+        overdueAmount: number;
+        overdueCount: number;
+        lastInvoiceDate: Date;
+        nextDueDate: Date;
+    }[]>;
+    getContacts(req: any, search?: string, type?: string): Promise<{
+        id: string;
+        name: string;
+        taxNumber: string | null;
+        address: string | null;
+        phone: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string;
+        email: string | null;
+        isActive: boolean;
+        type: import(".prisma/client").$Enums.CustomerSupplierType;
+        taxOffice: string | null;
+        city: string | null;
+        country: string | null;
+        balance: import("@prisma/client/runtime/library").Decimal;
+        notes: string | null;
+    }[]>;
+    createContact(dto: any, req: any, res: Response): Promise<Response<any, Record<string, any>>>;
+    getContactSummary(id: string, req: any): Promise<{
+        error: string;
+        contact?: undefined;
+        invoices?: undefined;
+        totalDebt?: undefined;
+        totalPaid?: undefined;
+        remaining?: undefined;
+        invoiceCount?: undefined;
+    } | {
+        contact: {
+            id: string;
+            name: string;
+            taxNumber: string | null;
+            address: string | null;
+            phone: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            tenantId: string;
+            email: string | null;
+            isActive: boolean;
+            type: import(".prisma/client").$Enums.CustomerSupplierType;
+            taxOffice: string | null;
+            city: string | null;
+            country: string | null;
+            balance: import("@prisma/client/runtime/library").Decimal;
+            notes: string | null;
+        };
+        invoices: {
+            id: string;
+            status: import(".prisma/client").$Enums.InvoiceStatus;
+            type: import(".prisma/client").$Enums.InvoiceType;
+            invoiceNumber: string;
+            issueDate: Date;
+            dueDate: Date;
+            totalAmount: import("@prisma/client/runtime/library").Decimal;
+        }[];
+        totalDebt: number;
+        totalPaid: number;
+        remaining: number;
+        invoiceCount: number;
+        error?: undefined;
+    }>;
+    deleteContact(id: string, req: any): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }

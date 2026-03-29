@@ -7,16 +7,11 @@ import { InvoiceStatus } from '@prisma/client';
 export class ClientInvoicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Müşterinin yalnızca kendi faturalarını listeler
-   * contactId = customerSupplierId → katı izolasyon
-   */
   async getMyInvoices(contactId: string, tenantId: string) {
     return this.prisma.invoice.findMany({
       where: {
         tenantId,
-        customerSupplierId: contactId,    // ← Kritik filtre
-        status: { not: InvoiceStatus.DRAFT }, // Taslak faturalar gösterilmez
+        customerSupplierId: contactId,
       },
       select: {
         id: true,
@@ -32,9 +27,6 @@ export class ClientInvoicesService {
     });
   }
 
-  /**
-   * Fatura detayı — contactId sahiplik doğrulaması zorunlu
-   */
   async getMyInvoiceDetail(invoiceId: string, contactId: string, tenantId: string) {
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, tenantId },
@@ -42,8 +34,6 @@ export class ClientInvoicesService {
     });
 
     if (!invoice) throw new NotFoundException('Fatura bulunamadı');
-
-    // Müşteri başka birinin faturasına erişmeye çalışıyor mu?
     if (invoice.customerSupplierId !== contactId) {
       throw new ForbiddenException('Bu faturaya erişim yetkiniz bulunmuyor.');
     }
@@ -51,9 +41,6 @@ export class ClientInvoicesService {
     return invoice;
   }
 
-  /**
-   * Müşterinin özet bakiyesi (Dashboard)
-   */
   async getMySummary(contactId: string, tenantId: string) {
     const invoices = await this.prisma.invoice.findMany({
       where: { tenantId, customerSupplierId: contactId, status: { not: InvoiceStatus.DRAFT } },
@@ -78,5 +65,116 @@ export class ClientInvoicesService {
       totalPaid: paid.toNumber(),
       invoiceCount: invoices.length,
     };
+  }
+
+  async createInvoice(
+    contactId: string,
+    tenantId: string,
+    dto: {
+      invoiceNumber: string;
+      type: string;
+      issueDate: string;
+      dueDate?: string;
+      currency?: string;
+      notes?: string;
+      items: {
+        description: string;
+        quantity: number;
+        unit?: string;
+        unitPrice: number;
+        discountRate?: number;
+        taxRate?: number;
+      }[];
+    },
+  ) {
+    let subtotal = new Decimal(0);
+    let totalTax = new Decimal(0);
+
+    const itemsData = dto.items.map((item) => {
+      const lineSubtotal = new Decimal(item.quantity).times(item.unitPrice);
+      const discount = lineSubtotal.times(item.discountRate || 0).dividedBy(100);
+      const afterDiscount = lineSubtotal.minus(discount);
+      const tax = afterDiscount.times(item.taxRate ?? 20).dividedBy(100);
+      const lineTotal = afterDiscount.plus(tax);
+
+      subtotal = subtotal.plus(afterDiscount);
+      totalTax = totalTax.plus(tax);
+
+      return {
+        description: item.description,
+        quantity: item.quantity,
+        unit: (item.unit as any) || 'ADET',
+        unitPrice: item.unitPrice,
+        discountRate: item.discountRate || 0,
+        taxRate: item.taxRate ?? 20,
+        lineSubtotal: afterDiscount.toNumber(),
+        lineTax: tax.toNumber(),
+        lineTotal: lineTotal.toNumber(),
+        withholdingRate: 0,
+        lineWithholding: 0,
+      };
+    });
+
+    const totalAmount = subtotal.plus(totalTax);
+
+    // Client portal users are NOT in the User table, so we need a valid User UUID
+    // for the createdById FK constraint. Use the first admin user of the tenant.
+    const tenantUser = await this.prisma.user.findFirst({
+      where: { tenantId },
+      select: { id: true },
+    });
+    if (!tenantUser) {
+      throw new NotFoundException('Tenant kullanıcısı bulunamadı. Fatura oluşturulamaz.');
+    }
+
+    try {
+      return await this.prisma.invoice.create({
+        data: {
+          tenantId,
+          customerSupplierId: contactId,
+          createdById: tenantUser.id,
+          invoiceNumber: dto.invoiceNumber,
+          type: dto.type || 'SALES',
+          status: 'DRAFT',
+          issueDate: new Date(dto.issueDate),
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+          currency: dto.currency || 'TRY',
+          exchangeRate: 1,
+          subtotal: subtotal.toNumber(),
+          taxAmount: totalTax.toNumber(),
+          totalAmount: totalAmount.toNumber(),
+          notes: dto.notes,
+          items: {
+            create: itemsData.map((item) => ({
+              ...item,
+              tenantId,
+            })),
+          },
+        } as any,
+        include: { items: true },
+      });
+    } catch (err) {
+      console.error('[CLIENT_INVOICE_CREATE_ERROR]', err);
+      throw err;
+    }
+  }
+
+  async deleteInvoice(invoiceId: string, contactId: string, tenantId: string) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId },
+    });
+
+    if (!invoice) throw new NotFoundException('Fatura bulunamadı');
+    if (invoice.customerSupplierId !== contactId) {
+      throw new ForbiddenException('Bu faturaya erişim yetkiniz bulunmuyor.');
+    }
+    if (invoice.status !== 'DRAFT') {
+      throw new ForbiddenException('Sadece taslak faturalar silinebilir.');
+    }
+
+    await this.prisma.invoiceItem.deleteMany({ where: { invoiceId } });
+    await this.prisma.invoice.delete({ where: { id: invoiceId } });
+
+    return { success: true, message: 'Fatura silindi' };
   }
 }

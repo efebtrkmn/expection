@@ -108,13 +108,31 @@ async function main() {
     },
   });
 
+  // ── ClientUser (Portal kullanıcısı — client_users tablosu) ───────
+  const portalUser = await prisma.clientUser.upsert({
+    where: { tenantId_email: { tenantId: tenant1.id, email: 'musteri@ornekmusteri.com.tr' } },
+    update: {},
+    create: {
+      tenantId:           tenant1.id,
+      customerSupplierId: demoCustomer.id,
+      email:              'musteri@ornekmusteri.com.tr',
+      passwordHash:       clientPass,
+      isActive:           true,
+    },
+  });
+
   console.log(`✅ Demo müşteri ve ClientUser oluşturuldu`);
+  console.log(`   Portal tenantId: ${tenant1.id}`);
   console.log('\n🎉 Seed tamamlandı!');
   console.log('\n📋 Demo Giriş Bilgileri:');
-  console.log('  SuperAdmin:  superadmin@expection.app  / SuperAdmin@2024!');
-  console.log('  Accountant:  muhasebeci@demo...        / Accountant@2024!');
-  console.log('  Auditor:     musavir@demo...            / Auditor@2024!');
-  console.log('  ClientUser:  musteri@ornekmusteri...    / Client@2024!');
+  console.log('  SuperAdmin:    superadmin@expection.app         / SuperAdmin@2024!');
+  console.log('  Accountant:    muhasebeci@demo...               / Accountant@2024!');
+  console.log('  Auditor:       musavir@demo...                  / Auditor@2024!');
+  console.log('  ClientUser:    musteri@ornekmusteri...           / Client@2024!');
+  console.log(`\n📌 Müşteri Portalı Giriş:`);
+  console.log(`  İşletme ID: ${tenant1.id}`);
+  console.log('  E-posta:    musteri@ornekmusteri.com.tr');
+  console.log('  Şifre:      Client@2024!');
 }
 
 main()

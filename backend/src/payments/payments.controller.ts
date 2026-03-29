@@ -8,7 +8,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { ClientJwtGuard } from '../client-portal/guards/client-jwt.guard';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Public } from '../common/decorators/roles.decorator';
+import { Public, SkipTenantCheck } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { Request } from 'express';
@@ -45,6 +45,8 @@ export class PaymentsController {
     return this.iyzicoService.onboardSubMerchant(tenantId);
   }
 
+  @Public()
+  @SkipTenantCheck()
   @UseGuards(ClientJwtGuard)
   @Post('iyzico/checkout/:invoiceId')
   @ApiOperation({ summary: 'Fatura icin Iyzico Checkout Form Baslat' })
@@ -53,6 +55,7 @@ export class PaymentsController {
   }
 
   @Public()
+  @SkipTenantCheck()
   @Post('iyzico/callback')
   @HttpCode(200)
   @ApiOperation({ summary: 'Iyzico Odeme Sonuc Bildirimi - Webhook' })

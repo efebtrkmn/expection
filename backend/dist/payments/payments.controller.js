@@ -89,6 +89,8 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], PaymentsController.prototype, "onboard", null);
 __decorate([
+    (0, roles_decorator_2.Public)(),
+    (0, roles_decorator_2.SkipTenantCheck)(),
     (0, common_1.UseGuards)(client_jwt_guard_1.ClientJwtGuard),
     (0, common_1.Post)('iyzico/checkout/:invoiceId'),
     (0, swagger_1.ApiOperation)({ summary: 'Fatura icin Iyzico Checkout Form Baslat' }),
@@ -101,6 +103,7 @@ __decorate([
 ], PaymentsController.prototype, "initCheckout", null);
 __decorate([
     (0, roles_decorator_2.Public)(),
+    (0, roles_decorator_2.SkipTenantCheck)(),
     (0, common_1.Post)('iyzico/callback'),
     (0, common_1.HttpCode)(200),
     (0, swagger_1.ApiOperation)({ summary: 'Iyzico Odeme Sonuc Bildirimi - Webhook' }),

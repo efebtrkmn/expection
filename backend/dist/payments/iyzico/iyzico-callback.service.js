@@ -78,29 +78,53 @@ let IyzicoCallbackService = IyzicoCallbackService_1 = class IyzicoCallbackServic
                 callbackPayload: payload,
             },
         });
-        const invoice = await this.prisma.invoice.update({
+        const invoice = await this.prisma.invoice.findUnique({
             where: { id: invoiceId },
-            data: {
-                status: client_1.InvoiceStatus.PAID,
-            },
             include: { customerSupplier: true },
         });
-        await this.createCollectionJournalEntry(tenantId, invoice, amount);
-        const customerEmail = invoice.customerSupplier?.email;
+        if (!invoice)
+            throw new Error('Fatura bulunamadı');
+        const [updatedInvoice, transaction, updatedContact] = await this.prisma.$transaction([
+            this.prisma.invoice.update({
+                where: { id: invoiceId },
+                data: { status: client_1.InvoiceStatus.PAID },
+                include: { customerSupplier: true },
+            }),
+            this.prisma.transaction.create({
+                data: {
+                    tenantId,
+                    customerSupplierId,
+                    invoiceId,
+                    type: 'INCOME',
+                    amount: Number(amount),
+                    currency: session.currency || 'TRY',
+                    description: `Iyzico Kredi Kartı Tahsilatı (Fatura: ${invoice.invoiceNumber})`,
+                    transactionDate: new Date(),
+                    paymentMethod: 'CREDIT_CARD',
+                    createdById: invoice.createdById,
+                },
+            }),
+            this.prisma.customerSupplier.update({
+                where: { id: customerSupplierId },
+                data: { balance: { decrement: Number(amount) } },
+            }),
+        ]);
+        await this.createCollectionJournalEntry(tenantId, updatedInvoice, amount);
+        const customerEmail = updatedInvoice.customerSupplier?.email;
         if (customerEmail) {
             await this.mailService.sendPaymentConfirmation(customerEmail, {
-                customerName: invoice.customerSupplier.name,
-                invoiceNumber: invoice.invoiceNumber,
+                customerName: updatedInvoice.customerSupplier.name,
+                invoiceNumber: updatedInvoice.invoiceNumber,
                 amount: Number(amount),
-                currency: invoice.currency || 'TRY',
+                currency: updatedInvoice.currency || 'TRY',
                 paidAt: new Date(),
             });
         }
         const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
         if (tenant?.email) {
             await this.mailService.sendAdminPaymentAlert(tenant.email, {
-                customerName: invoice.customerSupplier.name,
-                invoiceNumber: invoice.invoiceNumber,
+                customerName: updatedInvoice.customerSupplier.name,
+                invoiceNumber: updatedInvoice.invoiceNumber,
                 amount: Number(amount),
             });
         }
@@ -108,10 +132,10 @@ let IyzicoCallbackService = IyzicoCallbackService_1 = class IyzicoCallbackServic
             tenantId,
             invoiceId,
             amount: Number(amount),
-            invoiceNumber: invoice.invoiceNumber,
-            customerName: invoice.customerSupplier.name,
+            invoiceNumber: updatedInvoice.invoiceNumber,
+            customerName: updatedInvoice.customerSupplier.name,
         });
-        this.logger.log(`✅ Ödeme başarılı: Fatura ${invoice.invoiceNumber} → PAID`);
+        this.logger.log(`✅ Ödeme başarılı: Fatura ${updatedInvoice.invoiceNumber} → PAID`);
     }
     async handleFailedPayment(session, payload) {
         await this.prisma.paymentSession.update({

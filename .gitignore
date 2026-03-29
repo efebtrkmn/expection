@@ -4,10 +4,12 @@ node_modules/
 .pnp.js
 
 # Build çıkışları
-/dist
-/build
-/.next/
-/out/
+dist/
+build/
+.next/
+out/
+android/
+ios/
 
 # Ortam değişkenleri (ASLA commit etmeyin!)
 .env

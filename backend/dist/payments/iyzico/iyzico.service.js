@@ -161,9 +161,10 @@ let IyzicoService = IyzicoService_1 = class IyzicoService {
             };
         }
         catch (err) {
-            if (err instanceof common_1.BadRequestException)
+            if (err instanceof common_1.BadRequestException && err.message.includes('Sub-merchant kaydı')) {
                 throw err;
-            this.logger.warn('Iyzico MOCK: Checkout form simülasyonu');
+            }
+            this.logger.warn(`Iyzico MOCK: Checkout form simülasyonu (Hata: ${err.message})`);
             const mockConvId = (0, uuid_1.v4)();
             await this.prisma.paymentSession.create({
                 data: {

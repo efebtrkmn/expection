@@ -88,28 +88,53 @@ export class IyzicoCallbackService {
       },
     });
 
-    // 2. Faturayi PAID yap
-    const invoice = await this.prisma.invoice.update({
+    // 1.5 Fatura detaylarını al (transaction işlemi için gerekli)
+    const invoice = await this.prisma.invoice.findUnique({
       where: { id: invoiceId },
-      data: {
-        status: InvoiceStatus.PAID,
-      },
       include: { customerSupplier: true },
     });
+    if (!invoice) throw new Error('Fatura bulunamadı');
+
+    // 2. Faturayi PAID yap, Islemler tablosuna kayit at ve Cari Bakiyeyi guncelle
+    const [updatedInvoice, transaction, updatedContact] = await this.prisma.$transaction([
+      this.prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: InvoiceStatus.PAID },
+        include: { customerSupplier: true },
+      }),
+      this.prisma.transaction.create({
+        data: {
+          tenantId,
+          customerSupplierId,
+          invoiceId, // associate with this invoice
+          type: 'INCOME',
+          amount: Number(amount),
+          currency: session.currency || 'TRY',
+          description: `Iyzico Kredi Kartı Tahsilatı (Fatura: ${invoice.invoiceNumber})`,
+          transactionDate: new Date(),
+          paymentMethod: 'CREDIT_CARD',
+          createdById: invoice.createdById, // the user who created the invoice
+        },
+      }),
+      this.prisma.customerSupplier.update({
+        where: { id: customerSupplierId },
+        data: { balance: { decrement: Number(amount) } },
+      }),
+    ]);
 
     // 3. Otomatik Tahsilat Yevmiyesi
     //    DR 102 Bankalar (veya 100 Kasa) ← Tahsil edilen net tutar
     //    CR 120 Alıcılar                 ← Alacak kapatma
-    await this.createCollectionJournalEntry(tenantId, invoice, amount);
+    await this.createCollectionJournalEntry(tenantId, updatedInvoice, amount);
 
     // 4. Müşteri'ye ödeme onay e-postası
-    const customerEmail = (invoice.customerSupplier as any)?.email;
+    const customerEmail = (updatedInvoice.customerSupplier as any)?.email;
     if (customerEmail) {
       await this.mailService.sendPaymentConfirmation(customerEmail, {
-        customerName: invoice.customerSupplier.name,
-        invoiceNumber: invoice.invoiceNumber,
+        customerName: updatedInvoice.customerSupplier.name,
+        invoiceNumber: updatedInvoice.invoiceNumber,
         amount: Number(amount),
-        currency: invoice.currency || 'TRY',
+        currency: updatedInvoice.currency || 'TRY',
         paidAt: new Date(),
       });
     }
@@ -118,8 +143,8 @@ export class IyzicoCallbackService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if ((tenant as any)?.email) {
       await this.mailService.sendAdminPaymentAlert((tenant as any).email, {
-        customerName: invoice.customerSupplier.name,
-        invoiceNumber: invoice.invoiceNumber,
+        customerName: updatedInvoice.customerSupplier.name,
+        invoiceNumber: updatedInvoice.invoiceNumber,
         amount: Number(amount),
       });
     }
@@ -129,11 +154,11 @@ export class IyzicoCallbackService {
       tenantId,
       invoiceId,
       amount: Number(amount),
-      invoiceNumber: invoice.invoiceNumber,
-      customerName: invoice.customerSupplier.name,
+      invoiceNumber: updatedInvoice.invoiceNumber,
+      customerName: updatedInvoice.customerSupplier.name,
     });
 
-    this.logger.log(`✅ Ödeme başarılı: Fatura ${invoice.invoiceNumber} → PAID`);
+    this.logger.log(`✅ Ödeme başarılı: Fatura ${updatedInvoice.invoiceNumber} → PAID`);
   }
 
   private async handleFailedPayment(session: any, payload: any) {

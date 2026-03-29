@@ -23,7 +23,6 @@ let ClientInvoicesService = class ClientInvoicesService {
             where: {
                 tenantId,
                 customerSupplierId: contactId,
-                status: { not: client_1.InvoiceStatus.DRAFT },
             },
             select: {
                 id: true,
@@ -70,6 +69,87 @@ let ClientInvoicesService = class ClientInvoicesService {
             totalPaid: paid.toNumber(),
             invoiceCount: invoices.length,
         };
+    }
+    async createInvoice(contactId, tenantId, dto) {
+        let subtotal = new decimal_js_1.Decimal(0);
+        let totalTax = new decimal_js_1.Decimal(0);
+        const itemsData = dto.items.map((item) => {
+            const lineSubtotal = new decimal_js_1.Decimal(item.quantity).times(item.unitPrice);
+            const discount = lineSubtotal.times(item.discountRate || 0).dividedBy(100);
+            const afterDiscount = lineSubtotal.minus(discount);
+            const tax = afterDiscount.times(item.taxRate ?? 20).dividedBy(100);
+            const lineTotal = afterDiscount.plus(tax);
+            subtotal = subtotal.plus(afterDiscount);
+            totalTax = totalTax.plus(tax);
+            return {
+                description: item.description,
+                quantity: item.quantity,
+                unit: item.unit || 'ADET',
+                unitPrice: item.unitPrice,
+                discountRate: item.discountRate || 0,
+                taxRate: item.taxRate ?? 20,
+                lineSubtotal: afterDiscount.toNumber(),
+                lineTax: tax.toNumber(),
+                lineTotal: lineTotal.toNumber(),
+                withholdingRate: 0,
+                lineWithholding: 0,
+            };
+        });
+        const totalAmount = subtotal.plus(totalTax);
+        const tenantUser = await this.prisma.user.findFirst({
+            where: { tenantId },
+            select: { id: true },
+        });
+        if (!tenantUser) {
+            throw new common_1.NotFoundException('Tenant kullanıcısı bulunamadı. Fatura oluşturulamaz.');
+        }
+        try {
+            return await this.prisma.invoice.create({
+                data: {
+                    tenantId,
+                    customerSupplierId: contactId,
+                    createdById: tenantUser.id,
+                    invoiceNumber: dto.invoiceNumber,
+                    type: dto.type || 'SALES',
+                    status: 'DRAFT',
+                    issueDate: new Date(dto.issueDate),
+                    dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+                    currency: dto.currency || 'TRY',
+                    exchangeRate: 1,
+                    subtotal: subtotal.toNumber(),
+                    taxAmount: totalTax.toNumber(),
+                    totalAmount: totalAmount.toNumber(),
+                    notes: dto.notes,
+                    items: {
+                        create: itemsData.map((item) => ({
+                            ...item,
+                            tenantId,
+                        })),
+                    },
+                },
+                include: { items: true },
+            });
+        }
+        catch (err) {
+            console.error('[CLIENT_INVOICE_CREATE_ERROR]', err);
+            throw err;
+        }
+    }
+    async deleteInvoice(invoiceId, contactId, tenantId) {
+        const invoice = await this.prisma.invoice.findFirst({
+            where: { id: invoiceId, tenantId },
+        });
+        if (!invoice)
+            throw new common_1.NotFoundException('Fatura bulunamadı');
+        if (invoice.customerSupplierId !== contactId) {
+            throw new common_1.ForbiddenException('Bu faturaya erişim yetkiniz bulunmuyor.');
+        }
+        if (invoice.status !== 'DRAFT') {
+            throw new common_1.ForbiddenException('Sadece taslak faturalar silinebilir.');
+        }
+        await this.prisma.invoiceItem.deleteMany({ where: { invoiceId } });
+        await this.prisma.invoice.delete({ where: { id: invoiceId } });
+        return { success: true, message: 'Fatura silindi' };
     }
 };
 exports.ClientInvoicesService = ClientInvoicesService;

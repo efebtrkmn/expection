@@ -189,9 +189,11 @@ export class IyzicoService {
         tokenExpireTime: response.data.tokenExpireTime,
       };
     } catch (err) {
-      if (err instanceof BadRequestException) throw err;
+      if (err instanceof BadRequestException && err.message.includes('Sub-merchant kaydı')) {
+        throw err;
+      }
       // Sandbox mock
-      this.logger.warn('Iyzico MOCK: Checkout form simülasyonu');
+      this.logger.warn(`Iyzico MOCK: Checkout form simülasyonu (Hata: ${err.message})`);
       const mockConvId = uuidv4();
       await this.prisma.paymentSession.create({
         data: {
